@@ -124,7 +124,5 @@ The following features/tasks are planned for the future releases of the app:
 - Add a search bar to the navigation drawer to search for messages within chats
 - Add a background service which uses BlueTooth/HTTP/WiFi to communicate with a desktop application to send queries 
   from the desktop to the mobile device for inference
-- Enable auto-scroll when generating partial response in `ChatActivity`
-- Measure RAM consumption
 - Integrate [Android-Doc-QA](https://github.com/shubham0204/Android-Document-QA) for on-device RAG-based question answering from documents
 - Check if llama.cpp can be compiled to use Vulkan for inference on Android devices (and use the mobile GPU)

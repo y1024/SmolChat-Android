@@ -98,8 +98,7 @@ private fun LazyItemScope.UserMessageListItem(
     var isEditing1 = isEditing
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .animateItem(),
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
     ) {
         Column(horizontalAlignment = Alignment.End) {
@@ -195,7 +194,6 @@ private fun LazyItemScope.LLMMessageListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .animateItem()
     ) {
         Spacer(modifier = Modifier.width(8.dp))
         Column {

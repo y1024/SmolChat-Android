@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -48,23 +49,82 @@ fun ColumnScope.MessagesList(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val lastUserMessageIndex = messages.indexOfLast { it.isUserMessage }
+    val reversedMessages = remember(messages) { messages.reversed() }
+
+    // Scroll to the bottom when the number of messages changes
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size)
+            listState.animateScrollToItem(0)
         }
     }
+
+    // Auto-scroll during generation only if the user is already at the bottom
+    LaunchedEffect(renderedPartialResponse) {
+        if (isGeneratingResponse && !listState.isScrollInProgress) {
+            if (listState.firstVisibleItemIndex <= 1) {
+                listState.scrollToItem(0)
+            }
+        }
+    }
+
     LazyColumn(
-        state = listState, modifier = Modifier
+        state = listState,
+        reverseLayout = true,
+        modifier = Modifier
             .fillMaxSize()
             .weight(1f)
     ) {
-        itemsIndexed(messages) { i, chatMessage ->
+        if (isGeneratingResponse) {
+            item(key = "generating_response") {
+                if (renderedPartialResponse != null) {
+                    MessageListItem(
+                        ChatMessage(renderedMessage = renderedPartialResponse),
+                        responseGenerationSpeed = null,
+                        responseGenerationTimeSecs = null,
+                        false,
+                        {},
+                        {},
+                        onMessageEdited = {
+                            // Not applicable as allowEditing is set to False
+                        },
+                        allowEditing = false,
+                        onCodeSnippetCopyClicked = {
+                            // Not applicable as partial messages (may) not have code snippets
+                        }
+                    )
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                    ) {
+                        Icon(
+                            modifier = Modifier.padding(8.dp),
+                            imageVector = FeatherIcons.User,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = stringResource(R.string.chat_thinking),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+        }
+        itemsIndexed(reversedMessages, key = { _, message -> message.id }) { i, chatMessage ->
+            val originalIndex = messages.size - 1 - i
             MessageListItem(
                 chatMessage,
                 responseGenerationSpeed =
-                    if (i == messages.size - 1) responseGenerationsSpeed else null,
+                    if (originalIndex == messages.size - 1) responseGenerationsSpeed else null,
                 responseGenerationTimeSecs =
-                    if (i == messages.size - 1) responseGenerationTimeSecs else null,
+                    if (originalIndex == messages.size - 1) responseGenerationTimeSecs else null,
                 chatMessage.isUserMessage,
                 onCopyClicked = {
                     val clipboard =
@@ -109,55 +169,11 @@ fun ColumnScope.MessagesList(
                     )
                 },
                 // allow editing the message only if it is the last message in the list
-                allowEditing = (i == lastUserMessageIndex),
+                allowEditing = (originalIndex == lastUserMessageIndex),
                 onCodeSnippetCopyClicked = {
                     showCodeSnippetsListDialog(it)
                 }
             )
-        }
-        if (isGeneratingResponse) {
-            item {
-                if (renderedPartialResponse != null) {
-                    MessageListItem(
-                        ChatMessage(renderedMessage = renderedPartialResponse),
-                        responseGenerationSpeed = null,
-                        responseGenerationTimeSecs = null,
-                        false,
-                        {},
-                        {},
-                        onMessageEdited = {
-                            // Not applicable as allowEditing is set to False
-                        },
-                        allowEditing = false,
-                        onCodeSnippetCopyClicked = {
-                            // Not applicable as partial messages (may) not have code snippets
-                        }
-                    )
-                } else {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                                .animateItem(),
-                    ) {
-                        Icon(
-                            modifier = Modifier.padding(8.dp),
-                            imageVector = FeatherIcons.User,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = stringResource(R.string.chat_thinking),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            fontSize = 12.sp,
-                        )
-                    }
-                }
-            }
         }
     }
 }

@@ -194,6 +194,7 @@ class ChatScreenViewModel(
     // to render them correctly in Markdown
     private val findThinkTagRegex = Regex("<think>(.*?)</think>", RegexOption.DOT_MATCHES_ALL)
     private var activityManager: ActivityManager
+    private var lastRenderTime = 0L
 
     init {
         setupCollectors()
@@ -686,6 +687,7 @@ class ChatScreenViewModel(
             appDB.addUserMessage(chat.id, query)
         }
         _uiState.update { it.copy(isGeneratingResponse = true, renderedPartialResponse = null) }
+        lastRenderTime = 0L
         smolLMManager.getResponse(
             query,
             responseTransform = {
@@ -696,7 +698,11 @@ class ChatScreenViewModel(
                 }
             },
             onPartialResponseGenerated = { resp ->
-                _uiState.update { it.copy(renderedPartialResponse = mdRenderer.render(resp)) }
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastRenderTime > 100) {
+                    _uiState.update { it.copy(renderedPartialResponse = mdRenderer.render(resp)) }
+                    lastRenderTime = currentTime
+                }
             },
             onSuccess = { response ->
                 val updatedChat = chat.copy(contextSizeConsumed = response.contextLengthUsed)
